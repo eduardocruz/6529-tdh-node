@@ -111,12 +111,39 @@ impossible to guess:
 5. On an odd level the last node is **promoted** unchanged, not duplicated.
 6. Prefix the result with `0x`.
 
+### The vectors, and where each one comes from
+
 `conformance/vectors/` holds golden vectors in the sense borrowed from
 cryptography: known inputs and the exact output any correct implementation must
 produce. They are JSON rather than test code, so an implementation in any language
-can be checked against the same files. The synthetic cases pin the tree's shape;
-the frozen mainnet snapshot carries the root 6529's production actually published,
-which is the one expectation in this repository that nothing here authored.
+can be checked against the same files. Each carries a `_source` block recording
+its provenance, because a vector whose origin is undocumented is an assertion.
+
+**`mainnet-25663469.json.gz` — upstream data, upstream answer.** Retrieved from
+`https://api.6529.io/oracle/tdh/above/0/entries` on 2026-08-02: 10,310 entries at
+block 25663469, and the root
+`0xdc652a6922d3b60c99201c28f33340d1966023f8ff27a10a9f8413e037eea2f9`, which is the
+value 6529's own production published for that block. Nothing here authored either
+side of it. Refresh or add another with
+`php conformance/verify.php --save=conformance/vectors/mainnet-<block>.json.gz`.
+
+**`tree-shape.json` — synthetic, and deliberately so.** Seven minimal cases, each
+isolating one rule: odd-level promotion, tie-breaking, zero exclusion. The inputs
+are invented; the expected roots were computed by a separate implementation written
+before `verify.php` existed, and the three-leaf case was reproduced by hand with
+`shasum -a 256` in a shell.
+
+They are synthetic because there is nothing upstream to reuse. `tdh_merkle.ts` is
+the only module in `6529seize-backend/src/tdhLoop` with **no test file** (checked
+2026-08-02), and no repository in the organisation publishes TDH test vectors. What
+was borrowed from the eligibility spec is the *format*, not the data — that spec
+covers a different subsystem.
+
+These cases inherit their authority from the mainnet vector. Had the algorithm been
+misread, that vector would not reproduce, and the seven synthetic ones would be
+consistent with each other and wrong together. The mainnet vector proves the reading
+was right; the synthetic ones make sure a future change does not quietly lose it,
+and say which rule broke when one does.
 
 ### Surface
 

@@ -1,5 +1,12 @@
 {
   "description": "Golden vectors for the 6529 TDH Merkle root. Inputs plus the exact output any correct implementation must produce. Language-neutral on purpose: JSON, not test code.",
+  "_source": {
+    "entries_authored_by": "this repository \u2014 synthetic, minimal inputs (0xaaa, 0xbbb\u2026) chosen to isolate one rule each",
+    "expected_roots_computed_by": "an independent implementation written before conformance/verify.php existed; the three-leaf case was additionally reproduced by hand with `shasum -a 256` in a shell",
+    "why_synthetic": "There is no upstream test for the Merkle construction to reuse. tdh_merkle.ts is the only module in 6529seize-backend/src/tdhLoop with no test file (checked 2026-08-02), and no repository in the organisation publishes TDH test vectors. The eligibility spec's golden-vector FORMAT is borrowed here; its data covers a different subsystem.",
+    "authority": "These cases inherit their authority from mainnet-25663469.json.gz. If our reading of the algorithm were wrong, that vector would not reproduce, and these would be internally consistent and wrong together.",
+    "algorithm_source": "6529seize-backend/src/tdhLoop/tdh_merkle.ts (64 lines), read 2026-08-02"
+  },
   "algorithm": {
     "leaf": "sha256(\"<consolidation_key>:<tdh>\") as lowercase hex",
     "parent": "sha256(hex_left . hex_right) \u2014 concatenation of the two hex STRINGS, not bytes",
