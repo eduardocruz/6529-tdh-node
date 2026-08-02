@@ -1,0 +1,150 @@
+{
+  "description": "Golden vectors for the 6529 TDH Merkle root. Inputs plus the exact output any correct implementation must produce. Language-neutral on purpose: JSON, not test code.",
+  "algorithm": {
+    "leaf": "sha256(\"<consolidation_key>:<tdh>\") as lowercase hex",
+    "parent": "sha256(hex_left . hex_right) \u2014 concatenation of the two hex STRINGS, not bytes",
+    "include": "only rows with tdh > 0",
+    "order": "tdh DESC, then consolidation_key ASC",
+    "odd_level": "the last node is promoted unchanged",
+    "root": "prefixed with 0x"
+  },
+  "cases": [
+    {
+      "name": "single-leaf",
+      "note": "A tree of one is its own root \u2014 no hashing of pairs happens at all.",
+      "entries": [
+        {
+          "consolidation_key": "0xaaa",
+          "tdh": 100
+        }
+      ],
+      "expected_root": "0xd0921b992044359547978a8dc17d55feceab61619d8a54b93e9492602a409d5f"
+    },
+    {
+      "name": "two-leaves",
+      "note": "The minimal pair: one parent hash over two hex strings.",
+      "entries": [
+        {
+          "consolidation_key": "0xaaa",
+          "tdh": 200
+        },
+        {
+          "consolidation_key": "0xbbb",
+          "tdh": 100
+        }
+      ],
+      "expected_root": "0x2b6b1bf8e4331ee7f388ca9a5170c1ebbcabc2fbd0e0dfeeba96f57135dc4b16"
+    },
+    {
+      "name": "three-leaves-odd-promoted",
+      "note": "Three leaves. The unpaired leaf is PROMOTED to the next level unchanged, not duplicated. Production's comment says 'duplicate'; its code promotes. Getting this wrong changes the root.",
+      "entries": [
+        {
+          "consolidation_key": "0xaaa",
+          "tdh": 300
+        },
+        {
+          "consolidation_key": "0xbbb",
+          "tdh": 200
+        },
+        {
+          "consolidation_key": "0xccc",
+          "tdh": 100
+        }
+      ],
+      "expected_root": "0x440d85cb21a79ee64da6bb7204824ba82aefbdbf269f21d80f28b3d6e8a06fee"
+    },
+    {
+      "name": "four-leaves",
+      "note": "A full, balanced tree \u2014 the only shape where no promotion occurs.",
+      "entries": [
+        {
+          "consolidation_key": "0xaaa",
+          "tdh": 400
+        },
+        {
+          "consolidation_key": "0xbbb",
+          "tdh": 300
+        },
+        {
+          "consolidation_key": "0xccc",
+          "tdh": 200
+        },
+        {
+          "consolidation_key": "0xddd",
+          "tdh": 100
+        }
+      ],
+      "expected_root": "0xcc2bd9a9e27dd461382d500fabc984a0d77de82f3e37be17716eba45c2747849"
+    },
+    {
+      "name": "ties-broken-by-key",
+      "note": "Every row ties on tdh, given in reverse key order. Only a secondary sort by consolidation_key ASC produces the expected root. The live API returns rows ordered by tdh alone, so consuming its order verbatim fails here.",
+      "entries": [
+        {
+          "consolidation_key": "0xddd",
+          "tdh": 50
+        },
+        {
+          "consolidation_key": "0xccc",
+          "tdh": 50
+        },
+        {
+          "consolidation_key": "0xbbb",
+          "tdh": 50
+        },
+        {
+          "consolidation_key": "0xaaa",
+          "tdh": 50
+        }
+      ],
+      "expected_root": "0x5a27d4cd0034c59d3d0b044f7ee8b26bc25f5246b6cc2ed233e8fad25311c46a"
+    },
+    {
+      "name": "zero-tdh-excluded",
+      "note": "Rows at tdh == 0 are served by /oracle/tdh/above/0/entries but are NOT in the tree: the route filters >= 0, the tree is built over > 0. This must produce the same root as 'two-leaves'.",
+      "entries": [
+        {
+          "consolidation_key": "0xaaa",
+          "tdh": 200
+        },
+        {
+          "consolidation_key": "0xbbb",
+          "tdh": 100
+        },
+        {
+          "consolidation_key": "0xzero",
+          "tdh": 0
+        }
+      ],
+      "expected_root": "0x2b6b1bf8e4331ee7f388ca9a5170c1ebbcabc2fbd0e0dfeeba96f57135dc4b16"
+    },
+    {
+      "name": "five-leaves-promotion-twice",
+      "note": "Five leaves: promotion happens on two consecutive levels (5 -> 3 -> 2 -> 1).",
+      "entries": [
+        {
+          "consolidation_key": "0xaaa",
+          "tdh": 500
+        },
+        {
+          "consolidation_key": "0xbbb",
+          "tdh": 400
+        },
+        {
+          "consolidation_key": "0xccc",
+          "tdh": 300
+        },
+        {
+          "consolidation_key": "0xddd",
+          "tdh": 200
+        },
+        {
+          "consolidation_key": "0xeee",
+          "tdh": 100
+        }
+      ],
+      "expected_root": "0x6338a0dc713e1e720fd6ad3967f0dafcd4e6ecd5e58c704cce7383d62016809e"
+    }
+  ]
+}

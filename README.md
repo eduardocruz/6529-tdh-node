@@ -60,7 +60,7 @@ The Prenode source is a reference for *structure*. Production is the oracle for
 ### The pass/fail criterion is a single hash
 
 Every response from the `/oracle/*` API carries the block it was computed at and a
-Merkle root over the result set:
+Merkle root:
 
 ```json
 { "count": 10239,
@@ -68,13 +68,55 @@ Merkle root over the result set:
   "merkle_root": "0xdc652a6922d3b60c99201c28f33340d1966023f8ff27a10a9f8413e037eea2f9" }
 ```
 
+The root is **global for the block**, not a digest of whatever rows a given query
+returned — `/tdh/above/0` and `/tdh/above/1000` return different counts and the
+same root. It covers every identity holding a positive TDH at that block.
+
 Two implementations conform when they produce **the same `merkle_root` at the same
 `block`**. No row-by-row diff, no judgement call, no "close enough". One hash
-decides, and anyone can check it with `curl`.
+decides.
 
-This repository treats that as the definition of correctness, and the conformance
-harness that checks it is the first deliverable — before any of the calculation is
-written.
+## Conformance
+
+The root is only a test if an outsider can reproduce it. This is that check,
+running against the live API:
+
+```
+php conformance/verify.php                    # against api.6529.io
+php conformance/verify.php --endpoint=URL     # against any TDH provider
+php conformance/run-vectors.php               # offline, against frozen vectors
+```
+
+`verify.php` fetches a provider's own entries, rebuilds the tree from scratch and
+compares. It exits `0` when the published root reproduces, `1` when it does not,
+`2` when the data could not be read — so it works as a CI gate, not just as
+something to read. It targets one endpoint you name; it does not crawl the prenode
+registry or publish scoreboards of other people's nodes.
+
+### How the root is built
+
+Recovered from production's `src/tdhLoop/tdh_merkle.ts` and confirmed against the
+live API. It is not documented anywhere upstream, and three of these steps are
+impossible to guess:
+
+1. Take every identity with `tdh > 0` at the block. Note the API's `/above/0` route
+   filters `>= 0`, so **it serves rows the tree never saw** — 71 of them at block
+   25663469.
+2. Sort by `tdh` **descending**, then `consolidation_key` **ascending**. The
+   secondary key is load-bearing: thousands of identities tie on `tdh`, and the
+   API's own response order does *not* reproduce the root.
+3. Leaf = `sha256("<consolidation_key>:<tdh>")`, lowercase hex.
+4. Parent = `sha256(left . right)` over the two children as hex **strings**, not
+   bytes.
+5. On an odd level the last node is **promoted** unchanged, not duplicated.
+6. Prefix the result with `0x`.
+
+`conformance/vectors/` holds golden vectors in the sense borrowed from
+cryptography: known inputs and the exact output any correct implementation must
+produce. They are JSON rather than test code, so an implementation in any language
+can be checked against the same files. The synthetic cases pin the tree's shape;
+the frozen mainnet snapshot carries the root 6529's production actually published,
+which is the one expectation in this repository that nothing here authored.
 
 ### Surface
 
@@ -129,19 +171,30 @@ of confusion about TDH and it is nowhere in the existing documentation.
 
 ## Status
 
-**Nothing is implemented yet.** This repository currently contains this README.
+**The conformance harness works. The node does not exist yet.**
 
-The intended order is deliberate, and inverted from the obvious one:
+1. ~~**Conformance harness**~~ — done. Runs in CI daily against `api.6529.io`, and
+   offline against frozen vectors.
+2. **Specification** — next. What TDH actually is, including the parts that exist
+   only in code today: that it is a function of current state rather than an
+   accumulator, where identity stops being derivable from the chain, and the
+   token-date accounting.
+3. **Implementation** — build to the spec, judged by the harness.
 
-1. **Specification** — write down what TDH actually is, including the parts that
-   exist only in code today
-2. **Conformance harness** — a test that can tell whether *any* implementation
-   agrees with production, running in CI against live endpoints
-3. **Implementation** — build to the spec, judged by the harness
+The harness came first, which inverts the order this README originally announced.
+The reason is that it worked: the Merkle construction was the hardest part of the
+protocol to specify from the outside, and reproducing the root turned it from
+inference into measured fact. The specification is now partly a byproduct of the
+harness rather than a prerequisite for it.
 
-The harness is useful on its own, before this node computes anything: it answers a
-question nobody can currently answer, which is whether a given independent
-implementation is producing correct numbers right now.
+It is also useful on its own, before this node computes anything — it answers a
+question nobody could previously answer, which is whether a given TDH provider is
+serving numbers that match the root it publishes.
+
+## Requirements
+
+PHP 8.5. Nothing else — the harness uses only core hashing, JSON and HTTP. There is
+no `composer.json` yet and no `vendor/`; anyone with `php` on their path can run it.
 
 ## License
 
