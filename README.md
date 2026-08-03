@@ -202,11 +202,14 @@ of confusion about TDH and it is nowhere in the existing documentation.
 
 1. ~~**Conformance harness**~~ — done. Runs in CI daily against `api.6529.io`, and
    offline against frozen vectors.
-2. **Specification** — next. What TDH actually is, including the parts that exist
-   only in code today: that it is a function of current state rather than an
-   accumulator, where identity stops being derivable from the chain, and the
-   token-date accounting.
-3. **Implementation** — build to the spec, judged by the harness.
+2. ~~**Specification**~~ — [`SPEC.md`](SPEC.md). Complete enough to build from, and
+   it opens with §0: the five sections a first spike needs, and the three it can skip.
+   Every claim is marked with how it was established — read in production source,
+   confirmed against the live API, stated by the team, or still open. It assumes no
+   implementation language.
+3. **Implementation** — build to the spec, judged by the harness. Its first task is
+   not code: define the benchmark block range and measure a full recomputation, per
+   §8 of the spec. That measurement can still change the architecture.
 
 The harness came first, which inverts the order this README originally announced.
 The reason is that it worked: the Merkle construction was the hardest part of the
