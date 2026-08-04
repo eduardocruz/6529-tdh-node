@@ -160,6 +160,24 @@ backend of its own:
 /oracle/nfts/memes_seasons/:season?     /oracle/nfts/:contract?/:id?
 ```
 
+**These ten are not in 6529's official API specification.** There is an OpenAPI 3.0.3
+document at [`api.6529.io/openapi.json`](https://api.6529.io/openapi.json) (also
+[`.yaml`](https://api.6529.io/openapi.yaml), Swagger UI at
+[`/docs/`](https://api.6529.io/docs/), walkthrough at
+[6529.io/tools/api](https://6529.io/tools/api)) covering 289 paths under the `/api`
+base — and no `/oracle/*` route appears in it. That is why the routes above are
+written out here and in [`SPEC.md`](SPEC.md) §6: they are the surface this project
+must serve, and they are documented nowhere else.
+
+The OpenAPI document is still worth reading, because several routes under it answer
+questions an implementer will have — `/api/blocks`, `/api/nfts`,
+`/api/memes_extended_data`, `/api/transactions`. It declares a global `bearerAuth`
+and documents a session-v2 wallet flow to obtain one, but that declaration is broader
+than what is enforced: each of those routes answered `200` with no credentials when
+checked on 2026-08-04. **Building against this specification needs no wallet, no key
+and no account** — which is the point, and it is checked rather than assumed. See
+Sources in [`SPEC.md`](SPEC.md).
+
 ## One thing worth knowing up front
 
 Despite the name, **TDH is not an accumulator.** It is a pure function of current
