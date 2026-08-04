@@ -458,7 +458,7 @@ treated as a sale and resets TDH even between wallets inside the same consolidat
 
 **No such rule exists in the calculation.** Price is available — every transaction row
 carries `value`, `primary_proceeds` and `royalties` — and the calculation never reads
-any of them. Verified by searching all seven modules of `src/tdhLoop/` for those
+any of them. Verified by searching all eleven non-test modules of `src/tdhLoop/` for those
 fields, in **both** production and the Prenode:
 
 ```
@@ -713,6 +713,23 @@ several routes under it answer questions an implementer of §2 and §4 will have
 The exact semantics of these are **[open]** — they are listed here as leads, not as
 verified behaviour. Only their existence and published summaries have been checked.
 **[live]** 2026-08-04
+
+**Ignore the document's authentication requirement for reads.** It declares a global
+`bearerAuth` that every operation inherits, and describes a session-v2 wallet flow to
+obtain that bearer — `/api/auth/session-nonce` → sign → `/api/auth/session-login` →
+`/api/auth/session-refresh` / `session-logout`, with the older `nonce`, `login` and
+`redeem-refresh-token` routes kept only for compatibility
+([walkthrough](https://6529.io/tools/api/authentication)).
+
+The declaration is broader than what is enforced. Every route in the table above
+answered `200` with no credentials of any kind: `/api/blocks`,
+`/api/memes_extended_data`, `/api/nfts`, `/api/transactions` and
+`/api/tdh/consolidation/:identity`, each checked directly. **[live]** 2026-08-04
+
+So an implementation needs no wallet, no key and no account to read what it needs —
+which is what makes independent verification of this specification possible for
+anyone. Whether the gap is intentional or an artefact of how the document is
+generated is **[open]**; do not depend on it staying open.
 
 ### Statements by the team
 
