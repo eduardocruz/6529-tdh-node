@@ -1,7 +1,10 @@
 # TDH — a specification
 
-**Version 0.1 — 2 August 2026.** Complete enough to build from, and not yet validated
-by anything having been built. Nothing here is authoritative in the sense of being
+**Version 0.1.1 — 4 August 2026.** Complete enough to build from, and not yet validated
+by anything having been built.
+
+*0.1.1 adds scope only: xTDH and the upstream OpenAPI document are named and placed,
+below and under Sources. No claim about the calculation changed.* Nothing here is authoritative in the sense of being
 blessed by 6529; this is one attempt to write down what their production code does, in
 a form another implementation can be built and checked against.
 
@@ -22,6 +25,38 @@ Every claim carries a marker:
 No implementation language is assumed anywhere in this document. Where an operation
 could be read two ways, the intent is that two implementations in two languages
 produce byte-identical output.
+
+### Scope, and two things deliberately outside it
+
+This specification covers **the daily TDH calculation**: the modules under
+`src/tdhLoop/`, from the transfer set through to the Merkle root of §5. Two adjacent
+systems carry similar names and are not described here.
+
+**xTDH is a separate system, and ignoring it does not affect conformance.** Production
+runs a second loop — `src/xTdhLoop/`, an SQS-driven lambda over the `src/xtdh/`
+service, with `src/xTdhGrantsReviewerLoop/` beside it. Holders **grant** an
+`xtdh_rate` to a target contract and token list on a `target_chain`, bounded by
+`valid_from`/`valid_to`, either revocable or `is_irrevocable` — the latter "must be
+covered with lock contracts". It surfaces under `/api/xtdh/*`: grants, grantees,
+collections, tokens, per-token contributors, and global stats carrying a `multiplier`.
+**[live]** 2026-08-04
+
+The direction of dependency is what matters here, and it is one-way: **no module under
+`src/tdhLoop/` references xTDH at all** — checked across all eleven non-test modules —
+and the Merkle leaf is `sha256("<consolidation_key>:<boosted_tdh>")` and nothing else
+(§5). xTDH reads TDH; TDH does not read xTDH. An implementation that never hears of
+xTDH still produces the correct root. **[code]** `src/tdhLoop/` at `main`, 2026-08-04
+
+*This is a statement about the calculation, not a judgement about importance. xTDH is
+live, it is a real extension of TDH beyond the three contracts of §2, and it deserves
+its own specification. This is not that document.*
+
+**The wider REST API is specified upstream; the oracle routes are not part of it.**
+6529 publishes an OpenAPI 3.0.3 document at
+[`api.6529.io/openapi.json`](https://api.6529.io/openapi.json) (and `.yaml`), covering
+**289 paths** under the `/api` base. The ten `/oracle/*` routes of §6 **do not appear
+in it** — that surface is written down here because it is written down nowhere else.
+**[live]** 2026-08-04
 
 ---
 
@@ -651,9 +686,33 @@ its last commit, 2 July 2025. It is 6529's own self-hostable TDH provider, and i
 ### The live API
 
 `https://api.6529.io/oracle/*` — unauthenticated reads, served with
-`Access-Control-Allow-Origin: *`. Every **[live]** marker was checked on 2026-08-02.
-The registry of running providers is at
+`Access-Control-Allow-Origin: *`. Every **[live]** marker was checked on 2026-08-02,
+except those dated 2026-08-04. The registry of running providers is at
 [6529.io/network/prenodes](https://6529.io/network/prenodes).
+
+**There is an official machine-readable spec for the rest of the API**, which this
+document did not cite before v0.1.1:
+[`api.6529.io/openapi.json`](https://api.6529.io/openapi.json) ·
+[`.yaml`](https://api.6529.io/openapi.yaml) · Swagger UI at
+[`/docs/`](https://api.6529.io/docs/) · terminology and authentication walkthrough at
+[6529.io/tools/api](https://6529.io/tools/api). OpenAPI 3.0.3, 289 paths, base `/api`.
+
+It specifies request and response shapes; it says nothing about how TDH is computed,
+which is why it does not displace this document. It is worth reading anyway, because
+several routes under it answer questions an implementer of §2 and §4 will have:
+
+| route | summary, as published |
+|---|---|
+| `/api/blocks` | Get blocks and related timestamps — bears on the block selection of §1 |
+| `/api/nfts` | Get NFTs |
+| `/api/memes_extended_data` | Get paginated Memes extended data — bears on edition sizes and seasons, §4.2 and §4.3 |
+| `/api/transactions` | Get transactions — the transfer rows of §2 |
+| `/api/tdh-editions/wallet/{wallet}` | Get TDH editions for a wallet |
+| `/api/tdh/consolidation/{identity}` | Get consolidated TDH for an identity |
+
+The exact semantics of these are **[open]** — they are listed here as leads, not as
+verified behaviour. Only their existence and published summaries have been checked.
+**[live]** 2026-08-04
 
 ### Statements by the team
 

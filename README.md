@@ -195,6 +195,13 @@ of confusion about TDH and it is nowhere in the existing documentation.
   independently computed.
 - P2P networking, mempool, RPC-between-nodes. That is what `6529node` is for.
 - Waves, drops, subscriptions, minting, and the rest of the 6529 application.
+- **xTDH** — production's grant system, where a holder assigns an `xtdh_rate` to
+  another contract's tokens on a target chain. It runs in its own loop
+  (`src/xTdhLoop/`) and is served under `/api/xtdh/*`. Leaving it out costs nothing
+  here: no module under `src/tdhLoop/` references it, and the Merkle leaf is
+  `sha256("<consolidation_key>:<boosted_tdh>")` — so xTDH reads TDH and not the
+  reverse. It is a real extension of TDH and deserves its own specification; this is
+  not that document. See the scope section of [`SPEC.md`](SPEC.md).
 
 ## Status
 
