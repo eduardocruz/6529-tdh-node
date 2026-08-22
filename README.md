@@ -8,6 +8,10 @@ implementation of the TDH calculation.
 > This repository implements **only** the TDH accounting layer — the same role the
 > [6529-Prenode](https://github.com/6529-Collections/6529-Prenode) fills today.
 
+**[Live conformance record →](https://eduardocruz.github.io/6529-tdh-node/)** — the
+result of every daily check, pass or fail, alongside the
+[specification](https://eduardocruz.github.io/6529-tdh-node/spec/).
+
 ---
 
 ## Why a second implementation

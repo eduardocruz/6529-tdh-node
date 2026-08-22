@@ -1,0 +1,155 @@
+---
+layout: default
+title: Conformance
+body_class: status
+render_with_liquid: false
+description: A daily, independent check that the Merkle root api.6529.io publishes reproduces from the entries it serves.
+---
+
+<h1 class="claim">The root 6529 publishes reproduces from the data it serves.</h1>
+<p class="claim-sub">
+  Every day at 01:30 UTC this repository fetches every TDH entry from
+  <code>api.6529.io</code>, rebuilds the Merkle tree from scratch, and compares the
+  root it arrives at against the one the API publishes for the same block. One hash
+  decides. The result of every run is recorded below, pass or fail.
+</p>
+
+<section class="panel" id="status" aria-live="polite">
+  <div class="status-head">
+    <span class="pill idle" id="verdict">loading</span>
+    <span class="checked-at" id="checked-at"></span>
+  </div>
+  <dl class="facts">
+    <div><dt>Block</dt><dd id="f-block">—</dd></div>
+    <div><dt>Identities in tree</dt><dd id="f-tree">—</dd></div>
+    <div><dt>Entries served</dt><dd id="f-served">—</dd></div>
+    <div><dt>Consecutive passes</dt><dd id="f-streak">—</dd></div>
+  </dl>
+  <div class="root-row">
+    <dt>Merkle root — published, and recomputed</dt>
+    <p class="root-hash" id="f-root">—</p>
+    <p class="root-note" id="f-rootnote"></p>
+  </div>
+</section>
+
+<h2 class="section-title">The two conditions of conformance</h2>
+<div class="conditions">
+  <div class="panel condition">
+    <h3>Live check <span class="tag idle" id="c-live">—</span></h3>
+    <p>
+      The root <code>api.6529.io</code> publishes is recomputed from the entries the
+      same API serves. A failure means the provider and its own data disagree — or
+      that the calculation upstream changed.
+    </p>
+  </div>
+  <div class="panel condition">
+    <h3>Golden vectors <span class="tag idle" id="c-vectors">—</span></h3>
+    <p>
+      Eight offline cases — seven synthetic tree shapes and one frozen mainnet
+      snapshot at block 25663469 — pinned to known roots. A failure here means this
+      implementation broke itself, not that upstream moved.
+    </p>
+  </div>
+</div>
+
+<h2 class="section-title">Every run recorded</h2>
+<div class="table-scroll">
+  <table class="history">
+    <thead>
+      <tr>
+        <th>Date (UTC)</th><th>Block</th><th>In tree</th>
+        <th>Root</th><th>Live</th><th>Vectors</th>
+      </tr>
+    </thead>
+    <tbody id="history"><tr><td colspan="6">loading…</td></tr></tbody>
+  </table>
+</div>
+
+<section class="caveat">
+  <h2>What this does not claim</h2>
+  <p>
+    This checks a provider against <em>itself</em>: that the commitment it publishes
+    describes the numbers it serves. It does <strong>not</strong> independently verify
+    that 6529's TDH values are correct, because that requires computing TDH from chain
+    data — which this project has specified in full but has not yet implemented.
+  </p>
+  <p>
+    Until it does, the honest statement is the narrow one: the root is internally
+    consistent, reproducible by a third party, and has been every day recorded here.
+    The <a href="spec/">specification</a> is what makes the wider claim checkable by
+    anyone, in any language.
+  </p>
+</section>
+
+<script>
+(function () {
+  var fmt = new Intl.NumberFormat('en-US');
+
+  function setPill(el, ok, textOk, textNo) {
+    el.className = el.className.replace(/\b(pass|fail|idle)\b/, ok ? 'pass' : 'fail');
+    el.textContent = ok ? textOk : textNo;
+  }
+
+  function render(rows) {
+    if (!rows.length) return;
+    var latest = rows[rows.length - 1];
+
+    var live = latest.conforms === true;
+    var vec  = latest.vectors !== false;
+
+    setPill(document.getElementById('verdict'), live && vec, 'conforming', 'not conforming');
+    setPill(document.getElementById('c-live'), live, 'PASS', 'FAIL');
+    setPill(document.getElementById('c-vectors'), vec, 'PASS', 'FAIL');
+
+    document.getElementById('checked-at').textContent = 'last checked ' + latest.date + ' · 01:30 UTC';
+    document.getElementById('f-block').textContent  = fmt.format(latest.block);
+    document.getElementById('f-tree').textContent   = fmt.format(latest.entries_in_tree);
+    document.getElementById('f-served').textContent = fmt.format(latest.entries_served);
+
+    // Streak: consecutive runs, newest first, where both conditions held.
+    var streak = 0;
+    for (var i = rows.length - 1; i >= 0; i--) {
+      if (rows[i].conforms === true && rows[i].vectors !== false) streak++;
+      else break;
+    }
+    document.getElementById('f-streak').textContent = streak + (streak === 1 ? ' run' : ' runs');
+
+    document.getElementById('f-root').textContent = latest.published_root;
+    document.getElementById('f-rootnote').textContent = latest.published_root === latest.computed_root
+      ? 'Recomputed root is identical, byte for byte.'
+      : 'MISMATCH — recomputed ' + latest.computed_root;
+
+    var body = document.getElementById('history');
+    body.innerHTML = '';
+    rows.slice().reverse().slice(0, 60).forEach(function (r) {
+      var tr = document.createElement('tr');
+      var okLive = r.conforms === true, okVec = r.vectors !== false;
+      tr.innerHTML =
+        '<td>' + r.date + '</td>' +
+        '<td>' + fmt.format(r.block) + '</td>' +
+        '<td>' + fmt.format(r.entries_in_tree) + '</td>' +
+        '<td class="root">' + String(r.published_root).slice(0, 10) + '…' + String(r.published_root).slice(-6) + '</td>' +
+        '<td class="' + (okLive ? 'ok' : 'no') + '">' + (okLive ? 'pass' : 'FAIL') + '</td>' +
+        '<td class="' + (okVec  ? 'ok' : 'no') + '">' + (okVec  ? 'pass' : 'FAIL') + '</td>';
+      body.appendChild(tr);
+    });
+  }
+
+  // JSONL, not JSON — one run per line, appended by CI. Parsed as text on purpose.
+  fetch('data/history.jsonl', { cache: 'no-cache' })
+    .then(function (r) { return r.text(); })
+    .then(function (text) {
+      var rows = text.split('\n')
+        .map(function (l) { return l.trim(); })
+        .filter(Boolean)
+        .map(function (l) { try { return JSON.parse(l); } catch (e) { return null; } })
+        .filter(Boolean)
+        .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+      render(rows);
+    })
+    .catch(function () {
+      document.getElementById('history').innerHTML =
+        '<tr><td colspan="6">history unavailable</td></tr>';
+    });
+})();
+</script>

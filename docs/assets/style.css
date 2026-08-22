@@ -1,0 +1,345 @@
+/* ---------------------------------------------------------------------------
+   One stylesheet, no build step, no framework.
+
+   Light is the default and is defined on bare :root; dark only redefines the
+   tokens. Anything that carries meaning here is a hash, a block number or a
+   pass/fail — so the type is monospace-forward and the colour vocabulary is
+   deliberately two states wide.
+   ------------------------------------------------------------------------ */
+
+:root {
+  --bg:        #fbfbfa;
+  --panel:     #ffffff;
+  --ink:       #16161a;
+  --ink-mute:  #5f6169;
+  --ink-faint: #8b8d96;
+  --rule:      #e3e3e0;
+  --rule-firm: #cfcfca;
+  --pass:      #14713d;
+  --pass-bg:   #e8f5ec;
+  --fail:      #a3122a;
+  --fail-bg:   #fdeaed;
+  --accent:    #16161a;
+
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:        #0e0e10;
+    --panel:     #171719;
+    --ink:       #ededf0;
+    --ink-mute:  #a1a1aa;
+    --ink-faint: #6e6e78;
+    --rule:      #26262a;
+    --rule-firm: #35353b;
+    --pass:      #4ade80;
+    --pass-bg:   #10241a;
+    --fail:      #f87171;
+    --fail-bg:   #2a1216;
+    --accent:    #ededf0;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-underline-offset: 3px; }
+
+code, pre, .mono { font-family: var(--mono); }
+
+/* ── masthead ─────────────────────────────────────────────────────────── */
+
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  align-items: baseline;
+  justify-content: space-between;
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1.75rem 1.5rem 1.25rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.wordmark {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  color: var(--ink);
+}
+.wordmark span { color: var(--ink-faint); font-weight: 400; }
+
+.masthead nav { display: flex; gap: 1.5rem; }
+.masthead nav a {
+  font-size: 0.85rem;
+  color: var(--ink-mute);
+  text-decoration: none;
+}
+.masthead nav a:hover { color: var(--ink); }
+.masthead nav a[aria-current="page"] {
+  color: var(--ink);
+  box-shadow: inset 0 -1px 0 var(--ink);
+}
+
+/* ── shared page shell ────────────────────────────────────────────────── */
+
+main { max-width: 60rem; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+.colophon {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 3rem;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-faint);
+  font-size: 0.8rem;
+}
+.colophon p { margin: 0.4rem 0; }
+.colophon code { color: var(--ink-mute); }
+
+/* ── the claim ────────────────────────────────────────────────────────── */
+
+.claim {
+  font-size: clamp(1.35rem, 3.2vw, 1.9rem);
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+  margin: 0 0 0.75rem;
+  max-width: 34ch;
+}
+.claim-sub {
+  color: var(--ink-mute);
+  margin: 0 0 2.5rem;
+  max-width: 62ch;
+}
+
+/* ── status panel ─────────────────────────────────────────────────────── */
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--rule-firm);
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.status-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+}
+.pill.pass { color: var(--pass); background: var(--pass-bg); }
+.pill.fail { color: var(--fail); background: var(--fail-bg); }
+.pill.idle { color: var(--ink-faint); background: var(--rule); }
+.pill::before { content: "\25CF"; font-size: 0.7em; }
+
+.checked-at { font-size: 0.8rem; color: var(--ink-faint); font-family: var(--mono); }
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1.25rem;
+  margin: 0;
+}
+.facts div { min-width: 0; }
+.facts dt {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  margin-bottom: 0.3rem;
+}
+.facts dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.root-row { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--rule); }
+.root-row dt {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  margin-bottom: 0.4rem;
+}
+.root-hash {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  word-break: break-all;
+  margin: 0;
+}
+.root-note { font-size: 0.8rem; color: var(--ink-mute); margin: 0.6rem 0 0; }
+
+/* ── the two conformance conditions ───────────────────────────────────── */
+
+.conditions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1rem;
+  margin-bottom: 2.75rem;
+}
+.condition { padding: 1.15rem 1.25rem; }
+.condition h3 {
+  font-size: 0.95rem;
+  margin: 0 0 0.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.condition .tag {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+.condition .tag.pass { color: var(--pass); background: var(--pass-bg); }
+.condition .tag.fail { color: var(--fail); background: var(--fail-bg); }
+.condition .tag.idle { color: var(--ink-faint); background: var(--rule); }
+.condition p { margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--ink-mute); }
+
+/* ── section headings ─────────────────────────────────────────────────── */
+
+.section-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  margin: 0 0 0.9rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* ── history table ────────────────────────────────────────────────────── */
+
+.table-scroll { overflow-x: auto; margin-bottom: 2.75rem; }
+
+table.history {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+table.history th {
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  padding: 0 0.9rem 0.55rem 0;
+  white-space: nowrap;
+}
+table.history td {
+  padding: 0.5rem 0.9rem 0.5rem 0;
+  border-top: 1px solid var(--rule);
+  white-space: nowrap;
+}
+table.history td.root { color: var(--ink-mute); }
+table.history td.ok   { color: var(--pass); }
+table.history td.no   { color: var(--fail); font-weight: 600; }
+
+/* ── prose (the spec page) ────────────────────────────────────────────── */
+
+.prose { max-width: 46rem; }
+.prose h1 {
+  font-size: clamp(1.6rem, 4vw, 2.1rem);
+  letter-spacing: -0.02em;
+  margin: 0 0 1.5rem;
+}
+.prose h2 {
+  font-size: 1.25rem;
+  letter-spacing: -0.01em;
+  margin: 3rem 0 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+}
+.prose h3 { font-size: 1rem; margin: 2rem 0 0.75rem; }
+.prose p, .prose li { color: var(--ink); }
+.prose blockquote {
+  margin: 1.5rem 0;
+  padding: 0.25rem 0 0.25rem 1.25rem;
+  border-left: 2px solid var(--rule-firm);
+  color: var(--ink-mute);
+}
+.prose code {
+  font-size: 0.87em;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+.prose pre {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-x: auto;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.prose pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  margin: 1.5rem 0;
+  display: block;
+  overflow-x: auto;
+}
+.prose th {
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  padding: 0 1rem 0.5rem 0;
+  border-bottom: 1px solid var(--rule-firm);
+}
+.prose td { padding: 0.55rem 1rem 0.55rem 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.prose hr { border: 0; border-top: 1px solid var(--rule); margin: 2.5rem 0; }
+
+/* ── honesty box ──────────────────────────────────────────────────────── */
+
+.caveat {
+  border: 1px solid var(--rule-firm);
+  border-left: 3px solid var(--ink-faint);
+  border-radius: 0 8px 8px 0;
+  padding: 1.15rem 1.35rem;
+  background: var(--panel);
+}
+.caveat h2 { font-size: 0.95rem; margin: 0 0 0.6rem; }
+.caveat p  { margin: 0.5rem 0 0; font-size: 0.88rem; color: var(--ink-mute); }
+.caveat p:first-of-type { margin-top: 0; }

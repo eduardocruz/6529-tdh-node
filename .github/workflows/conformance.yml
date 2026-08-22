@@ -1,15 +1,26 @@
 name: conformance
 
-# Two jobs doing deliberately different work.
+# Three jobs, deliberately sequential.
 #
 #   vectors  offline and deterministic — pins this repository's Merkle
 #            implementation to known inputs and outputs. Must always pass; a
-#            failure here means we broke ourselves.
+#            failure here means we broke ourselves, and nothing downstream is
+#            worth running.
 #
 #   live     hits api.6529.io and checks that the root it publishes reproduces
-#            from the entries it serves. A failure here means either they
-#            changed the calculation or their API is having a bad day — which
-#            is worth knowing either way, and is the reason this runs daily.
+#            from the entries it serves. A failure means either they changed
+#            the calculation or their API is having a bad day — which is worth
+#            knowing either way, and is the reason this runs daily. On a
+#            scheduled run it also appends the result to docs/data/history.jsonl
+#            and commits it, so the record is public rather than buried in logs.
+#
+#   site     renders the status page and SPEC.md to GitHub Pages. It runs after
+#            the commit and checks out main again, so the page it publishes
+#            includes the row that was just recorded.
+#
+# The jobs are chained with `needs:` rather than split across workflows on
+# purpose: a separate workflow triggered by the history commit would be
+# suppressed by the `[skip ci]` that stops the commit re-triggering this one.
 
 on:
   push:
@@ -22,6 +33,12 @@ on:
 
 permissions:
   contents: read
+
+# Never let two Pages deployments race. Scheduled runs must not be cancelled
+# midway — a half-finished run records nothing.
+concurrency:
+  group: conformance-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   vectors:
@@ -37,11 +54,92 @@ jobs:
 
   live:
     name: live check against api.6529.io
+    needs: vectors
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v5
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
           coverage: none
-      - run: php conformance/verify.php
+
+      - name: verify
+        run: php conformance/verify.php | tee /tmp/live.txt
+
+      - name: record the run
+        # Only on a schedule or a manual trigger. A push should not add a row —
+        # the history is a daily series, not a commit log.
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          php conformance/verify.php --json > /tmp/live.json
+          jq -c --arg d "$(date -u +%F)" \
+            '{date:$d, block:.block, entries_served:.entries_served,
+              entries_in_tree:.entries_in_tree, published_root:.published_root,
+              computed_root:.computed_root, conforms:.conforms, vectors:true}' \
+            /tmp/live.json >> docs/data/history.jsonl
+
+          # One row per UTC day, and a re-run must REPLACE that day rather than
+          # keep the stale one. `sort -u` picks an arbitrary row among equal keys
+          # (measured: it keeps the older), so key on the date explicitly and let
+          # the later line win.
+          awk -F'"' '{ a[$4] = $0 } END { for (k in a) print a[k] }' \
+            docs/data/history.jsonl | sort > /tmp/history.jsonl
+          mv /tmp/history.jsonl docs/data/history.jsonl
+
+      - name: commit the row
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name  'conformance bot'
+          git config user.email 'actions@github.com'
+          if git diff --quiet -- docs/data/history.jsonl; then
+            echo 'no change to record'; exit 0
+          fi
+          git add docs/data/history.jsonl
+          git commit -m "conformance: record $(date -u +%F) [skip ci]"
+          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+  site:
+    name: publish the site
+    needs: live
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      # Explicitly the branch head, not the triggering SHA — the live job may
+      # have pushed a row since this workflow started.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: generate the spec page from the canonical SPEC.md
+        # SPEC.md at the repository root stays the single source. This wraps it
+        # in front matter at build time so there is never a second copy to drift.
+        run: |
+          {
+            echo '---'
+            echo 'layout: default'
+            echo 'title: Specification'
+            echo 'permalink: /spec/'
+            echo 'render_with_liquid: false'
+            echo '---'
+            echo
+            cat SPEC.md
+          } > docs/spec.md
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+          destination: ./_site
+      - uses: actions/upload-pages-artifact@v3
+      - id: deploy
+        uses: actions/deploy-pages@v4

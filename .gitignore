@@ -1,2 +1,5 @@
 .DS_Store
 /vendor/
+
+# Generated at build time from the canonical SPEC.md at the repository root.
+docs/spec.md

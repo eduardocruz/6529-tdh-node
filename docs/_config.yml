@@ -1,0 +1,21 @@
+# Jekyll configuration for the project site.
+#
+# Deliberately minimal: no theme, no plugins, no gems beyond what GitHub Pages
+# already ships. The site is two pages and a JSONL file, and should stay
+# buildable by anyone who checks out the repository.
+
+title: 6529-tdh-node
+description: >-
+  An independent conformance check for TDH: does the Merkle root a provider
+  publishes actually describe the data it serves?
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+  syntax_highlighter: rouge
+
+# The spec page is generated into docs/ at build time from the canonical
+# SPEC.md at the repository root. Nothing here should be hand-edited.
+exclude:
+  - README.md
